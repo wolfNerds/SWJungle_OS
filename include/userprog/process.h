@@ -9,9 +9,8 @@ int process_exec (void *f_name);
 int process_wait (tid_t);
 void process_exit (void);
 void process_activate (struct thread *next);
-
-/* Parsing Function 임시 코드 - 김채욱 */
+void argument_stack(char **argv , int count , struct intr_frame* if_);
 int parsing_str(char *file_name, char* argv[]);
-void argument_stack(char **parse , int count , void **esp);
+
 
 #endif /* userprog/process.h */
