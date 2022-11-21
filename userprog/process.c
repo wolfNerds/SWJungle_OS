@@ -76,7 +76,6 @@ parsing_str(char *file_name, char* argv[]){
 		{
 			argv[count] = token;
 			count++;
-			printf("----------------------------------%s---------", argv[count]);
 		}
 	//argv[count] = "\0";
 	return count-1; // \0을 포함하지 않은 개수를 셈
