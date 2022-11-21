@@ -50,11 +50,9 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
-	// char* argv[100];
-	
-	// parsing_str(fn_copy, argv);
-	char* save_ptr;
-	strtok_r(file_name," ",&save_ptr);
+
+	char *save_ptr;
+	strtok_r(file_name, " ", &save_ptr);
 
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);  //배열은 전역변수로 선언 안해도 전역변수로 쓰이는가??
@@ -63,7 +61,8 @@ process_create_initd (const char *file_name) {
 	return tid;
 }
 
-/* count null 포함 확인 필요 */
+/* count null 미포함. 확인 필요 */
+
 int
 parsing_str(char *file_name, char* argv[]){
 	// 토큰 변수, 포인터 - 김채욱
@@ -180,7 +179,7 @@ __do_fork (void *aux) {
 		do_iret (&if_);
 error:
 	thread_exit ();
-}
+}exec;
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
@@ -197,14 +196,18 @@ process_exec (void *f_name) {
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
-	char fn_copy[128]; // 스택에 저장
-	// file_name_copy = palloc_get_page(PAL_USER); // 이렇게는 가능 but 비효율적.
-	memcpy(fn_copy, file_name, strlen(file_name)+1); // strlen에 +1? => 원래 문자열에는 \n이 들어가는데 strlen에서는 \n 앞까지만 읽고 끝내기 때문. 전체를 들고오기 위해 +1
+
 	/* We first kill the current context */
 	process_cleanup ();
 
+	// 안쓰는 변수 선언해서 버그 발생 
+	// char fn_copy[128];
+	// memcpy(fn_copy, file_name, strlen(file_name) + 1);
+
 	/* And then load the binary */
-	success = load (fn_copy, &_if);  // 수정 요망(fn_copy 만들어야함)
+
+	success = load (file_name, &_if); // 복사한 전체 파일 인자로 넣음.
+
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
@@ -213,52 +216,59 @@ process_exec (void *f_name) {
 
 	// 디버깅
 	void** rsapp = &_if.rsp;
-	hex_dump(_if.rsp, _if.rsp, KERN_BASE - (uint64_t)*rsapp, true);
 
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
 }
 
-void argument_stack(char **argv , int count , struct intr_frame* if_)
+void argument_stack(char **argv, int count, struct intr_frame* if_)
+
 {
 	/* 프로그램 이름 및 인자(문자열) push */
 	/* 프로그램 이름 및 인자 주소들 push */
 	/* argv (문자열을 가리키는 주소들의 배열을 가리킴) push*/ 
 	/* argc (문자열의 개수 저장) push */
 	/* fake address(0) 저장 */
-	char* rsp_adr[100];
-	int i;
+	char* rsp_adr[128];
+	int i, j;
+
 
 	/* 프로그램 이름 및 인자(문자열) push */
-	for(i = count - 1 ; i > -1 ; i--) 
+	for(i = count - 1; i > -1; i--) 
 	{
-		if_->rsp = if_->rsp - strlen(argv[i])-1;
-		//strlcat(**(char **)rsp, argv[i][j],strlen(argv[i]));
-		//if_->rsp = argv[i][j];
-		memcpy(if_->rsp, argv[i], strlen(argv[i])+1);
-		
-		rsp_adr[i] = if_->rsp;
-	}
 
+		if_->rsp = if_->rsp - strlen(argv[i]) - 1;
+		rsp_adr[i] = if_->rsp;
+		printf("rsp 주소 : %ld\n", if_->rsp);
+		// strlcat(**(char **)rsp, parse[i][j],strlen(parse[i]));
+		// *(char *)if_->rsp = parse[i][j];
+		memcpy(if_->rsp, argv[i], strlen(argv[i]) + 1);
+
+	}
+	printf("-----------------------------------------------------\n");
 	// rsp(16진수)를 8의 배수로 체크하고 맞춤
-	while (if_->rsp % 8 != 0) 
+
+	while (if_->rsp % 8 != 0)
 	{
-		if_->rsp--; // 주소값을 1 내리고
-		memset(if_->rsp, 0, sizeof(char*));
-		//*(uint8_t *) if_->rsp = 0; //데이터에 0 삽입 => 8바이트 저장
+		if_->rsp--;
+		// *(uint8_t*) if_->rsp = 0; // 이거 써도 됨
+		memset(if_->rsp, 0, sizeof(char)); //char*가 아니라 char로 해줘야 함
+		printf("rsp 주소 2 : %ld\n", if_->rsp);
 	}
 	
 	/* 프로그램 이름 및 인자 주소들 push */
-	for (int i = strlen(rsp_adr); i >=0; i--) 
-	{ // 여기서는 NULL 값 포인터도 같이 넣는다.
-		if_->rsp = if_->rsp - 8; // 8바이트만큼 내리고
-		if (i == strlen(rsp_adr)) { // 가장 위에는 NULL이 아닌 0을 넣어야지
-			memset(if_->rsp, 0, sizeof(char *));
-		} else { // 나머지에는 arg_address 안에 들어있는 값 가져오기
-			memcpy(if_->rsp, rsp_adr[i], sizeof(char *)); // char 포인터 크기: 8바이트
-		}	
+	for (i = 0; i < strlen(rsp_adr); i++)
+	{
+		if_->rsp = if_->rsp - 8;
+		if(i == 0){
+			memset(if_->rsp, 0, sizeof(char*));
+		} else {
+			memcpy(if_->rsp, &rsp_adr[i], sizeof(char*));
+		}
+		// *(char *)if_->rsp = rsp_adr[i];
 	}
 
 	// if_->rsp = if_->rsp-8 ;
@@ -268,16 +278,19 @@ void argument_stack(char **argv , int count , struct intr_frame* if_)
 	// memcpy(if_->rsp, count, count);
 
 	// /* argv (문자열을 가리키는 주소들의 배열을 가리킴) push*/ 
-	if_->rsp = if_->rsp-8 ;
-	memset(if_->rsp, 0, sizeof(void*));       // pg_round_down(va) 써야함.
-	
+
+	// if_->rsp = if_->rsp - 8;
+	// memcpy(if_->rsp, &rsp_adr[-1], sizeof(char*));
+
+	// if_->rsp = if_->rsp - 8;
+	// memcpy(if_->rsp, count, count);
+
+	// 마지막에 fake address를 저장한다
+	if_->rsp = if_->rsp - 8 ;
+	memset(if_->rsp, 0, sizeof(void*));
 
 	if_->R.rsi = if_->rsp + 8;
 	if_->R.rdi = count;
-	
-	// // 마지막에 fake address를 저장한다
-	// rsp = rsp-8 ;
-	// *(char *)rsp = (void*)0 ;
 }
 
 
@@ -290,11 +303,17 @@ void argument_stack(char **argv , int count , struct intr_frame* if_)
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
+/* 자식 스레드(child_tid)가 종료될 때 까지 대기하다가 종료상태를 반환
+	커널에 의해 종료된 경우 -1을 반환 child_tid가 잘못되었거나, 호출 프로세스의
+	하위 항목이 아니거나, 지정된 child_tid에 대해 process_wait가 이미 호출된
+	경우 -1을 즉시 반환.
+	이 기능은 2-2에서 구현 */
 int
 process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	thread_set_priority(thread_get_priority()-1);
 	return -1;
 }
 
@@ -420,23 +439,27 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
+	char* argv[128];
+	int count = parsing_str(file_name, argv);
+
 	char* argv[101];
 	int count = parsing_str(file_name, argv);
 	
 	/* Allocate and activate page directory. */
-	t->pml4 = pml4_create ();
+	t->pml4 = pml4_create (); // 페이지 디렉토리 생성
 	if (t->pml4 == NULL)
 		goto done;
-	process_activate (thread_current ());
+	process_activate (thread_current ()); // 페이지 테이블 활성화
 
 	/* Open executable file. */
-	file = filesys_open (file_name);
+	file = filesys_open (file_name); // 프로그램 파일 open
 	if (file == NULL) {
 		printf ("load: %s: open failed\n", file_name);
 		goto done;
 	}
 
 	/* Read and verify executable header. */
+	/* ELF파일의 헤더 정보를 읽어와 저장 */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
 			|| memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7)
 			|| ehdr.e_type != 2
@@ -451,6 +474,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	/* Read program headers. */
 	file_ofs = ehdr.e_phoff;
 	for (i = 0; i < ehdr.e_phnum; i++) {
+		/* 배치 정보를 읽어와 저장 */
 		struct Phdr phdr;
 
 		if (file_ofs < 0 || file_ofs > file_length (file))
@@ -491,6 +515,7 @@ load (const char *file_name, struct intr_frame *if_) {
 						read_bytes = 0;
 						zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
 					}
+					/* 배치 정보를 통해 파일을 메모리에 적재 */
 					if (!load_segment (file, file_page, (void *) mem_page,
 								read_bytes, zero_bytes, writable))
 						goto done;
@@ -502,6 +527,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	}
 
 	/* Set up stack. */
+	/* 스택 초기화 */
 	if (!setup_stack (if_))
 		goto done;
 
@@ -510,9 +536,8 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
-	
-	 // 첫번째 인자 수정 요망
-	argument_stack(argv ,count , if_);
+
+	argument_stack(argv, count, if_);
 
 	success = true;
 
