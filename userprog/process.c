@@ -438,9 +438,6 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	char* argv[128];
 	int count = parsing_str(file_name, argv);
-
-	char* argv[101];
-	int count = parsing_str(file_name, argv);
 	
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create (); // 페이지 디렉토리 생성
