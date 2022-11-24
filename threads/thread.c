@@ -216,15 +216,17 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
-	/* Add to run queue. */
+	/* File Descriptor 테이블에 메모리 할당 */
+	t->fdt = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
+	if (t->fdt == NULL) {
+		return TID_ERROR;
+	}
+	t->fd = 2; // 0은 stdin, 1은 stdout에 이미 할당
+	t->fdt[0] = 1; // stdin 자리: 1 배정
+	t->fdt[1] = 2; // stdout 자리: 2 배정
+	
 	thread_unblock (t);
 
-	/* 생성된 스레드의 우선순위가 현재 실행중인 스레드의 
-		우선순위 보다 높다면 CPU를 양보한다. */
-	/* 갈까? */
-	// test_max_priority();
-
-	/* 성심당 가자 */
 	if (cmp_priority(&t->elem, &curr->elem, NULL))
 		thread_yield();
 

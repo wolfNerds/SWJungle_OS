@@ -77,16 +77,16 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	// 	break;
 
 	case SYS_CREATE:
-		create(f->R.rdi, f->R.rsi);
+		f->R.rax = create(f->R.rdi, f->R.rsi);
 		break;
 	
 	case SYS_REMOVE:
 		remove(f->R.rdi);
 		break;
 
-	// case SYS_OPEN:
-	// 	open();
-	// 	break;
+	case SYS_OPEN:
+		f->R.rax = open(f->R.rdi);
+		break;
 
 	// case SYS_FILESIZE:
 	// 	filesize();
@@ -119,10 +119,13 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	// thread_exit ();
 }
 
+
+
 void check_address(void *addr)
 {
+	struct thread *current_thread = thread_current();
 	/* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
-	if (!is_user_vaddr(addr))
+	if (addr == NULL || !is_user_vaddr(addr) || pml4_get_page(current_thread->pml4, addr) == NULL)
 	{
 		/* 잘못된 접근일 경우 프로세스 종료 */
 		/* 확인 요망 */
@@ -157,11 +160,9 @@ void exit(int status)
 {
 	struct thread *cur = thread_current();
 	cur->exit_status = status;
-
+	printf("%s: exit(%d)\n",cur->name, status);
 	thread_exit();
 	
-	// /* 스레드 종료 */
-	// thread_exit();
 }
 
 /* 확인 요망 (나중에 구현!!!) */
@@ -200,11 +201,7 @@ int wait(pid_t pid)
 bool create(const char* file, unsigned initial_size)
 {
 	check_address(file);
-	
-	if(file == NULL || initial_size <= 0)
-		exit(-1);
-
-	return (filesys_create(file, initial_size)) ? true : false;
+	return filesys_create(file, initial_size) ? true : false;
 }
 
 bool remove(const char *file)
@@ -212,6 +209,47 @@ bool remove(const char *file)
 	check_address(file);
 	
 	return (filesys_remove(file)) ? true : false;
+}
+
+
+int add_file_to_fd_table(struct file *file){
+	struct thread* t = thread_current();
+	struct file** fdt = t->fdt;
+
+	int fd = t->fd;
+
+	while (t->fdt[fd] != NULL && fd < FDT_COUNT_LIMIT){
+		fd++;
+	}
+
+	if (fd >= FDT_COUNT_LIMIT)
+		return -1;
+
+	t->fd = fd;
+	fdt[fd] = file;
+	return fd;
+}
+
+int open (const char *file){ // file name
+	check_address(file);
+	struct file *file_obj = filesys_open(file);
+
+	if (file_obj == NULL)
+		return -1;
+	
+	int fd = add_file_to_fd_table(file_obj);
+
+	if (fd == -1)
+		file_close(file_obj);
+
+	return fd;		
+}
+
+int filesize (int fd)
+{
+/* 파일 디스크립터를 이용하여 파일 객체 검색 */
+/* 해당 파일의 길이를 리턴 */
+/* 해당 파일이 존재하지 않으면 -1 리턴 */
 }
 
 int write (int fd, const void *buffer, unsigned size) {
