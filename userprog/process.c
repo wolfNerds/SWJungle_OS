@@ -768,29 +768,11 @@ setup_stack (struct intr_frame *if_) {
 }
 #endif /* VM */
 
-struct thread *get_child_process(int pid)
+struct file* process_get_file(int fd)
 {
-	/* 자식 리스트에 접근하여 프로세스 디스크립터 검색 */
-	/* 해당 pid가 존재하면 프로세스 디스크립터 반환 */
-	/* 리스트에 존재하지 않으면 NULL 리턴 */
-}
-
-
-int process_add_file (struct file *f)
-{
-/* 파일 객체를 파일 디스크립터 테이블에 추가
-/* 파일 디스크립터의 최대값 1 증가 */
-/* 파일 디스크립터 리턴 */
-}
-
-struct file *process_get_file(int fd)
-{
-/* 파일 디스크립터에 해당하는 파일 객체를 리턴 */
-/* 없을 시 NULL 리턴 */
-}
-
-void process_close_file(int fd)
-{
-/* 파일 디스크립터에 해당하는 파일을 닫음 */
-/* 파일 디스크립터 테이블 해당 엔트리 초기화 */
+	struct thread* curr = thread_current();
+	// if (curr->fdt[fd] == NULL)
+	if (fd < 0 || fd >= FDT_COUNT_LIMIT)
+		return NULL;
+	return curr->fdt[fd];
 }
