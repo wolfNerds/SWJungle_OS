@@ -13,5 +13,5 @@ void argument_stack(char **argv , int count , struct intr_frame* if_);
 int parsing_str(char *file_name, char* argv[]);
 void argument_stack(char **argv, int count, struct intr_frame* if_);
 
-
+int process_add_file(struct file *f);
 #endif /* userprog/process.h */

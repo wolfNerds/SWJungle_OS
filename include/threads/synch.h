@@ -27,7 +27,9 @@ void sema_self_test (void);
 bool cmp_sem_priority(const struct list_elem* a,
 						const struct list_elem* b,
 						void *aux UNUSED);
-
+void lock_acquire (struct lock *lock);
+void lock_release (struct lock *lock);// lock을 반환
+void lock_init (struct lock *lock);
 /* Lock. */
 struct lock {
 	struct thread *holder;      /* Thread holding lock (for debugging). */
@@ -41,7 +43,6 @@ struct condition {
 };
 
 bool lock_try_acquire (struct lock *);
-void lock_release (struct lock *); // lock을 반환
 bool lock_held_by_current_thread (const struct lock *);
 
 

@@ -14,6 +14,7 @@
 #include "filesys/file.h"
 #include "userprog/process.h"
 
+#include "threads/synch.h"
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
 
@@ -41,6 +42,7 @@ syscall_init (void) {
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+	lock_init (filesys_lock);
 }
 
 /* The main system call interface */
@@ -84,17 +86,17 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		f->R.rax = remove(f->R.rdi);
 		break;
 
-	// case SYS_OPEN:
-	// 	f->R.rax = open(f->R.rdi);
-	// 	break;
+	case SYS_OPEN:
+		f->R.rax = open(f->R.rdi);
+		break;
 
-	// case SYS_FILESIZE:
-	// 	filesize();
-	// 	break;
+	case SYS_FILESIZE:
+		f->R.rax = filesize(f->R.rdi);
+		break;
 
-	// case SYS_READ:
-	// 	read();
-	// 	break;
+	case SYS_READ:
+		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
 		
 	case SYS_WRITE:
 		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
@@ -125,8 +127,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 void check_address(void *addr)
 {
+	struct thread* curr = thread_current();
+
 	/* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
-	if (!is_user_vaddr(addr))
+	if (!is_user_vaddr(addr) || addr == NULL || pml4_get_page(curr->pml4, addr) == NULL)
 	{
 		/* 잘못된 접근일 경우 프로세스 종료 */
 		/* 확인 요망 */
@@ -166,6 +170,7 @@ void exit(int status)
 	struct thread *cur = thread_current();
 	cur->exit_status = status;
 	/* 정상적으로 종료 시 status는 0 */
+	printf("%s: exit(%d)\n", cur->name, cur->exit_status);
 
 	/* 종료 시 "프로세스 이름: exit(status)" 출력(Process Termination Message) */
 	/* status 확인 요망 */
@@ -212,10 +217,6 @@ bool create(const char* file, unsigned initial_size)
 	check_address(file);
 	/* 파일 이름과 크기에 해당하는 파일 생성 */
 	/* 파일 생성 성공 시 true 반환, 실패 시 flase 반환 */
-	if (file == NULL || initial_size <= 0)
-	{
-		exit(-1);
-	}
 	
 	return (filesys_create(file, initial_size)) ? true : false;
 }
@@ -230,44 +231,80 @@ bool remove(const char *file)
 
 int open(const char *file)
 {
+
+	check_address(file);
 	/* 파일을 open */
+	struct file* open_file = filesys_open(file);
+
+	if(open_file == NULL)
+	{
+		/* 해당 파일이 존재하지 않으면 -1 리턴 */
+		return -1;
+	}
+	
 	/* 해당 파일 객체에 파일 디스크립터 부여 */
+	int fd = process_add_file(open_file);
+	if(fd == -1)
+	{
+		file_close(open_file);
+	}
 	/* 파일 디스크립터 리턴 */
-	/* 해당 파일이 존재하지 않으면 -1 리턴 */
-	check_address(file); // 먼저 주소 유효한지 늘 체크
-	struct file *file_obj = filesys_open(file); // 열려고 하는 파일 객체 정보를 filesys_open()으로 받기
-	
-	// 제대로 파일 생성됐는지 체크
-	if (file_obj == NULL) {
-		return -1;
-	}
-	int fd = add_file_to_fd_table(file_obj); // 만들어진 파일을 스레드 내 fdt 테이블에 추가
-
-	// 만약 파일을 열 수 없으면] -1을 받음
-	if (fd == -1) {
-		file_close(file_obj);
-	}
-
 	return fd;
 }
 
- /* 파일을 현재 프로세스의 fdt에 추가 */
-int add_file_to_fd_table(struct file *file) {
-	struct thread *t = thread_current();
-	struct file **fdt = t-> fdt;
-	int fd = t->fd; //fd값은 2부터 출발
-	
-	while (t->fdt[fd] != NULL && fd < FDT_COUNT_LIMIT) {
-		fd++;
-	}
-
-	if (fd >= FDT_COUNT_LIMIT) {
+int filesize(int fd)
+{
+	struct file* get_file = process_get_file(fd);
+	if(get_file == NULL)
+	{
+		/* 해당 파일이 존재하지 않으면 -1 리턴 */
 		return -1;
 	}
-	t->fd = fd;
-	fdt[fd] = file;
-	return fd;
+	return file_length(get_file);
 }
+
+int read(int fd, void *buffer, unsigned size)
+{
+	check_address(buffer);
+	/* 파일 디스크립터를 이용하여 파일 객체 검색 */
+	struct file *get_file = process_get_file(fd);
+	int count = 0;
+	char input;
+
+	if(get_file == NULL)
+	{
+		return -1;
+	}
+	if (fd == 0)
+	{
+		/* 파일 디스크립터가 0일 경우 키보드 입력을 버퍼에 저장 후
+		버퍼의 저장한 크기를 리턴(input_getc() 이용) */
+		while(count < size)
+		{
+			input = input_getc();
+			*(char *)buffer = input;
+
+			*buffer++;
+			count++;
+		}
+		
+	}
+	/* 파일 디스크립터가 0이 아닐 경우 파일의 데이터를 크기 만큼 저장 후
+	읽은 바이트 수를 리턴 */
+	else if (fd == 1)
+	{
+		return -1;
+	}
+	else
+	{
+		/* 파일에 동시 접근이 일어날 수 있으므로 lock 사용 */
+		lock_acquire(&filesys_lock);
+		count =	file_read(get_file, buffer, size);
+		lock_release(&filesys_lock);
+	}
+	return count;
+}
+
 
 int write(int fd, const void *buffer, unsigned size)
 {
@@ -284,6 +321,6 @@ int write(int fd, const void *buffer, unsigned size)
 		파일에 기록 후 기록한 바이트 수를 리턴 */
 	if (fd == 1) {
 		putbuf(buffer, size);
-		return size;
 	}
+	return size;
 }
