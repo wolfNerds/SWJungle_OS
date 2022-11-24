@@ -1,6 +1,10 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
+// project2 추가
+#define FDT_PAGES 3
+#define FDT_COUNT_LIMIT  FDT_PAGES*(1<<9) // limit fdidx
+
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -120,7 +124,6 @@ struct thread {
 
 	// struct semaphore exit_sema;
 	// struct semaphore load_sema;
-	int exit_status;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
@@ -128,6 +131,11 @@ struct thread {
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
+	int exit_status;
+	struct file** fdt;
+	int fd;
+
+
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */

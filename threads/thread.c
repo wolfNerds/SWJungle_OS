@@ -216,6 +216,15 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
+	//project 2
+	t->fdt = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
+	if (t->fdt == NULL) {
+		return TID_ERROR;
+	}
+	t->fd = 2;// 0은 stdin, 1은 stdout에 이미 할당
+	t->fdt[0] = 1; // stdin 자리: 1 배정
+	t->fdt[1] = 2; // stdout 자리: 2 배정
+	
 	/* Add to run queue. */
 	thread_unblock (t);
 

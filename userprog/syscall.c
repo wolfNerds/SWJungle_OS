@@ -81,11 +81,11 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		break;
 	
 	case SYS_REMOVE:
-		remove(f->R.rdi);
+		f->R.rax = remove(f->R.rdi);
 		break;
 
 	// case SYS_OPEN:
-	// 	open();
+	// 	f->R.rax = open(f->R.rdi);
 	// 	break;
 
 	// case SYS_FILESIZE:
@@ -230,7 +230,43 @@ bool remove(const char *file)
 
 int open(const char *file)
 {
+	/* 파일을 open */
+	/* 해당 파일 객체에 파일 디스크립터 부여 */
+	/* 파일 디스크립터 리턴 */
+	/* 해당 파일이 존재하지 않으면 -1 리턴 */
+	check_address(file); // 먼저 주소 유효한지 늘 체크
+	struct file *file_obj = filesys_open(file); // 열려고 하는 파일 객체 정보를 filesys_open()으로 받기
+	
+	// 제대로 파일 생성됐는지 체크
+	if (file_obj == NULL) {
+		return -1;
+	}
+	int fd = add_file_to_fd_table(file_obj); // 만들어진 파일을 스레드 내 fdt 테이블에 추가
 
+	// 만약 파일을 열 수 없으면] -1을 받음
+	if (fd == -1) {
+		file_close(file_obj);
+	}
+
+	return fd;
+}
+
+ /* 파일을 현재 프로세스의 fdt에 추가 */
+int add_file_to_fd_table(struct file *file) {
+	struct thread *t = thread_current();
+	struct file **fdt = t-> fdt;
+	int fd = t->fd; //fd값은 2부터 출발
+	
+	while (t->fdt[fd] != NULL && fd < FDT_COUNT_LIMIT) {
+		fd++;
+	}
+
+	if (fd >= FDT_COUNT_LIMIT) {
+		return -1;
+	}
+	t->fd = fd;
+	fdt[fd] = file;
+	return fd;
 }
 
 int write(int fd, const void *buffer, unsigned size)
