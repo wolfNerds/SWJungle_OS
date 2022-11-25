@@ -43,7 +43,9 @@ struct condition {
 bool lock_try_acquire (struct lock *);
 void lock_release (struct lock *); // lock을 반환
 bool lock_held_by_current_thread (const struct lock *);
-
+void lock_acquire (struct lock *lock);
+void lock_release (struct lock *lock);
+void lock_init (struct lock *lock);
 
 void cond_init (struct condition *); // condition variable 자료구조를 초기화
 void cond_wait (struct condition *, struct lock *); // condition variable을 통해 signal이 오는지 기다림

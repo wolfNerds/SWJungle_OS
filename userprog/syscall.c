@@ -14,6 +14,7 @@
 #include "filesys/file.h"
 #include "userprog/process.h"
 #include "threads/synch.h"
+#include "kernel/console.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -242,8 +243,7 @@ int read (int fd, void *buffer, unsigned size){
 			if(input == '\0') {
 				break;
 			}
-
-			*buffer++;
+			buffer++;
 			count++;
 		}
 	}
@@ -261,10 +261,22 @@ int read (int fd, void *buffer, unsigned size){
 }
 
 int write (int fd, const void *buffer, unsigned size) {
-	if (fd == 1) {
+	check_address(buffer);
+	check_address(buffer + size + 1);
+
+	struct file* get_file = process_get_file(fd);
+	
+	if (get_file == NULL || fd == 0) {
+		return -1;
+	} else if( fd == 1){
 		putbuf(buffer, size);
-		return size;
 	}
+	else {
+		lock_acquire(&filesys_lock);
+		file_write(get_file,buffer,size);
+		lock_release(&filesys_lock);
+	}
+	return size;
 }
 
 int add_file_to_fd_table(struct file *file){
