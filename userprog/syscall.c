@@ -99,13 +99,13 @@ void syscall_handler (struct intr_frame *f UNUSED) {
 		seek(f->R.rdi, f->R.rsi);
 		break;
 
-	// case SYS_TELL:
-	// 	tell();
-	// 	break;
+	case SYS_TELL:
+		tell(f->R.rdi);
+		break;
 
-	// case SYS_CLOSE:
-	// 	close();
-	// 	break;
+	case SYS_CLOSE:
+		close(f->R.rdi);
+		break;
 		
 	default:
 		break;
@@ -276,17 +276,19 @@ int write (int fd, const void *buffer, unsigned size) {
 	return size;
 }
 
-
-/*
-다음 읽을 byte를 변경한다 => 해당 position부터 읽는다
-이후 read가 0byte를 반환하면 eof인것이다
-write가 buffer길이를 넘으면 error(단 project4에서 길이 유동성을 포함하면 에러가 안난다)
-
-*/
 void seek (int fd, unsigned position){
 	struct file* get_file = process_get_file(fd);
-
 	file_seek(get_file, position);
+}
+
+unsigned tell (int fd){
+	struct file* get_file = process_get_file(fd);
+	return file_tell(get_file);
+}
+
+void close (int fd){
+	struct file* get_file = process_get_file(fd);
+	return file_close(get_file);
 }
 
 int add_file_to_fd_table(struct file *file){
