@@ -124,8 +124,16 @@ struct thread {
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
 	
+	struct list child_list;
+	struct list_elem child_elem;
+	struct intr_frame parent_if;
+	struct semaphore fork_sema; // 자식 스레드가 생성 될 때까지 기다림
+	struct semaphore wait_sema;  // 자식 스레드가 종료되기 기다린다
+	struct semaphore free_sema; // 자식 스레드가 해제 될 때까지 쓴다
+	
+
 	struct file** fdt;
-	int fd; // max값으로 최신화
+	int fd; 
 	int exit_status;
 #endif
 #ifdef VM

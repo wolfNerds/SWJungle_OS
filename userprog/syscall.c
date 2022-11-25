@@ -42,8 +42,6 @@ void syscall_init (void) {
 }
 
 void syscall_handler (struct intr_frame *f UNUSED) {
-	// TODO: Your implementation goes here.
-
 	uintptr_t rsp = f->rsp;
 	/* 유저 스택에 저장되어 있는 시스템 콜 넘버를 이용해 시스템 콜 핸들러 구현 */
 	/* 스택 포인터가 유저 영역인지 확인 */
@@ -60,9 +58,9 @@ void syscall_handler (struct intr_frame *f UNUSED) {
 		exit(f->R.rdi);
 		break;
 
-	// case SYS_FORK:
-	// 	fork();
-	// 	break;
+	case SYS_FORK:
+		fork(f->R.rdi);
+		break;
 
 	// case SYS_EXEC:
 	// 	exec();
@@ -159,7 +157,6 @@ pid_t fork(const char *thread_name)
 {
 	struct thread* cur = thread_current();
 	process_fork(thread_name, &cur->tf);
-	/* 프로세스 생성 시 부모 thread 구조체 안 list에 자식 thread 추가 */
 }
 
 int exec(const char *cmd_line)
@@ -312,3 +309,4 @@ int add_file_to_fd_table(struct file *file){
 	fdt[fd] = file;
 	return fd;
 }
+
