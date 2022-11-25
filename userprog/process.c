@@ -776,3 +776,12 @@ struct file* process_get_file(int fd)
 		return NULL;
 	return curr->fdt[fd];
 }
+
+void process_close_file(int fd)
+{
+	struct thread* curr = thread_current();
+	/* 파일 디스크립터에 해당하는 파일을 닫음 */
+	file_close(curr->fdt[fd]);
+	/* 파일 디스크립터 테이블 해당 엔트리 초기화 */
+	curr->fdt[fd] = NULL;
+}

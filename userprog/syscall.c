@@ -12,6 +12,7 @@
 #include "threads/init.h" 
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "filesys/inode.h"
 #include "userprog/process.h"
 #include "threads/synch.h"
 #include "kernel/console.h"
@@ -288,7 +289,10 @@ unsigned tell (int fd){
 
 void close (int fd){
 	struct file* get_file = process_get_file(fd);
-	return file_close(get_file);
+
+	if (get_file == NULL)
+		return;
+	process_close_file(fd);
 }
 
 int add_file_to_fd_table(struct file *file){
