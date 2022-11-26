@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -44,7 +45,7 @@ typedef int tid_t;
 
 /* System Open File */
 #define FDT_PAGES 3
-#define FDT_COUNT_LIMIT FDT_PAGES *(1<<9) // limit fdidx
+#define FDT_COUNT_LIMIT FDT_PAGES * (1<<9) // limit fdidx
 
 /* A kernel thread or user process.
  *

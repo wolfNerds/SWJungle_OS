@@ -18,9 +18,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
-
-#include "threads/synch.h"
-
+#include "include/userprog/syscall.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -34,6 +32,7 @@ static void __do_fork (void *);
 int process_add_file (struct file *f);
 struct file *process_get_file (int fd);
 void process_close_file (int fd);
+struct thread* get_child_process(int pid);
 
 
 /* General process initializer for initd and other process. */
@@ -115,7 +114,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	if(pid == TID_ERROR)
 		return TID_ERROR;
 	
-	struct thread* child = get_child(pid);
+	struct thread* child = get_child_process(pid);
 	sema_down(&child->fork_sema);
 	return pid;
 }
@@ -195,8 +194,11 @@ __do_fork (void *aux) {
 	current->fdt[0] = parent->fdt[0];
 	current->fdt[1] = parent->fdt[1];
 
-	for (size_t i=2; parent->fdt[i]!=NULL; i++){
-		current->fdt[i] file_duplicate(parent->fdt[i]);
+	for (size_t i=2; parent < FDT_COUNT_LIMIT;  i++){
+		if(parent->fdt[i]==NULL)
+			continue;
+
+		current->fdt[i] = file_duplicate(parent->fdt[i]);
 	}
 	current->fd = parent->fd;
 
@@ -210,7 +212,7 @@ __do_fork (void *aux) {
 	if (succ)
 		do_iret (&if_);
 error:
-	current->exist_status = TID_ERROR;
+	current->exit_status = TID_ERROR;
 	sema_up(&current->fork_sema);
 	exit(TID_ERROR);
 	// thread_exit ();
@@ -231,7 +233,6 @@ process_exec (void *f_name) {
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
-
 	/* We first kill the current context */
 	process_cleanup ();
 
@@ -247,14 +248,9 @@ process_exec (void *f_name) {
 	if (!success)
 		return -1;
 
-	// 디버깅
-	void** rsapp = &_if.rsp;
 	// hex_dump(_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 
-	// printf("RSP: %s\n", _if.rsp);
-	// printf("RDI: %s\n", _if.R.rdi);
-	// printf("RSI: %s\n", _if.R.rsi);
-	// printf("RDX: %s\n", _if.R.rdx);
+
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
@@ -813,7 +809,7 @@ void process_close_file(int fd)
 	curr->fdt[fd] = NULL;
 }
 
-struct thread* get_child(int pid){
+struct thread* get_child_process(int pid){
 	struct thread* cur = thread_current();
 	struct list* child_list = &cur->child_list;
 	for (struct list_elem* e = list_begin(child_list);

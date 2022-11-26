@@ -1,21 +1,23 @@
 #include "userprog/syscall.h"
-#include "lib/user/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/loader.h"
 #include "userprog/gdt.h"
+#include "userprog/process.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
-#include "threads/vaddr.h"
-#include "threads/init.h" 
-#include "filesys/filesys.h"
-#include "filesys/file.h"
-#include "filesys/inode.h"
-#include "userprog/process.h"
-#include "threads/synch.h"
-#include "kernel/console.h"
+#include "include/filesys/filesys.h"
+#include "threads/init.h"
+#include "threads/palloc.h"
+#include "include/lib/stdio.h"
+#include "include/filesys/file.h"
+
+#ifdef VM
+#include "vm/vm.h"
+#endif
+
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -59,12 +61,12 @@ void syscall_handler (struct intr_frame *f UNUSED) {
 		break;
 
 	case SYS_FORK:
-		fork(f->R.rdi);
+		f->R.rax = fork(f->R.rdi, f);
 		break;
 
-	// case SYS_EXEC:
-	// 	exec();
-	// 	break;
+	case SYS_EXEC:
+		f->R.rax = exec(f->R.rdi);
+		break;
 
 	// case SYS_WAIT:
 	// 	wait();
@@ -153,19 +155,31 @@ void exit(int status)
 	
 }
 
-pid_t fork(const char *thread_name)
+tid_t fork(const char *thread_name, struct intr_frame *f UNUSED)
 {
-	struct thread* cur = thread_current();
-	process_fork(thread_name, &cur->tf);
+	return process_fork(thread_name, f);
 }
 
-int exec(const char *cmd_line)
+int exec(const char *file_name)
 {
 	/* 자식 프로세스를 생성하고 프로그램을 실행시키는 시스템 콜 */
+	check_address(file_name);
+	
+	int size = strlen(file_name) + 1;
+	char *fn_copy = palloc_get_page(PAL_ZERO);
+	if ((fn_copy) == NULL) {
+		exit(-1);
+		return -1;
+	}
+	strlcpy(fn_copy, file_name, size);
 
+	if (process_exec(fn_copy) == -1) {
+		exit(-1);
+		return -1;
+	}
 }
 
-int wait(pid_t pid)
+int wait(tid_t pid)
 {
 	
 	/* 자식 프로세스의 pid를 기다리고 종료 상태를 확인. */
