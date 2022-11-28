@@ -249,6 +249,7 @@ run_task (char **argv) {
 	if (thread_tests){
 		run_test (task);
 	} else {
+		printf("==========================run_task의 process_wait진입\n");
 		process_wait (process_create_initd (task));
 	}
 #else

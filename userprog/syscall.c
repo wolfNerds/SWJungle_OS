@@ -35,6 +35,7 @@ void syscall_handler (struct intr_frame *);
 
 void
 syscall_init (void) {
+	printf("=====================syscall_init진입==============\n");
 	lock_init(&filesys_lock);
 	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
 			((uint64_t)SEL_KCSEG) << 32);
@@ -51,7 +52,7 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
-
+	printf("=======================syscall_handler진입================\n");
 	uintptr_t rsp = f->rsp;
 	/* 유저 스택에 저장되어 있는 시스템 콜 넘버를 이용해 시스템 콜 핸들러 구현 */
 	/* 스택 포인터가 유저 영역인지 확인 */
@@ -101,6 +102,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 	case SYS_READ:
 		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
+		printf("==========================read 나가는 부분=============\n");
 		break;
 		
 	case SYS_WRITE:
@@ -162,6 +164,7 @@ void check_address(void *addr)
 /* 확인 요망 */
 void halt(void)
 {
+	printf("=====================halt================\n");
 	/* PintOS를 종료시키는 시스템 콜 */
 	power_off();
 }
@@ -169,6 +172,7 @@ void halt(void)
 /* 확인 요망 */
 void exit(int status)
 {
+	printf("=====================exit================\n");
 	/* 현재 프로세스를 종료시키는 시스템 콜 */
 	/* status: 프로그램이 정상적으로 종료됐는지 확인 */
 
@@ -187,6 +191,7 @@ void exit(int status)
 /* 확인 요망 (나중에 구현!!!) */
 tid_t fork(const char *thread_name, struct intr_frame *f)
 {
+	printf("=====================fork================\n");
 	// check_address(thread_name);
 	// struct thread* cur = thread_current();
 	return process_fork(thread_name, f);
@@ -196,6 +201,7 @@ tid_t fork(const char *thread_name, struct intr_frame *f)
 /* 확인 요망 (나중에 구현!!!) */
 int exec(const char *cmd_line)
 {
+	printf("==================시스템 콜exec진입=================\n");
 	check_address(cmd_line);
 
 	int size = strlen(cmd_line) + 1;
@@ -232,7 +238,7 @@ int exec(const char *cmd_line)
 
 int wait(pid_t pid)
 {
-	
+	printf("=====================wait================\n");
 	/* 자식 프로세스의 pid를 기다리고 종료 상태를 확인. */
 	/* pid가 살아있다면 종료될 때 까지 기다리고 종료 상태를 반환 */
 	/* pid가 exit()을 호출하지 않았지만 커널에 의해 종료된 경우 wait함수는 -1을 반환 */
@@ -250,7 +256,7 @@ int wait(pid_t pid)
 
 bool create(const char* file, unsigned initial_size)
 {
-
+	printf("=====================create================\n");
 	check_address(file);
 	/* 파일 이름과 크기에 해당하는 파일 생성 */
 	/* 파일 생성 성공 시 true 반환, 실패 시 flase 반환 */
@@ -260,6 +266,7 @@ bool create(const char* file, unsigned initial_size)
 
 bool remove(const char *file)
 {
+	printf("=====================remove================\n");
 	check_address(file);
 	/* 파일 이름에 해당하는 파일을 제거 */
 	/* 파일 제거 성공 시 true 반환, 실패 시 false 반환 */
@@ -268,6 +275,7 @@ bool remove(const char *file)
 
 int open(const char *file)
 {
+	printf("=====================open================\n");
 	check_address(file);
 	/* 파일을 open */
 	struct file* open_file = filesys_open(file);
@@ -291,6 +299,7 @@ int open(const char *file)
 /* 확인 요망 (테스트 불가) */
 int filesize(int fd)
 {
+	printf("=====================filesize================\n");
 	struct file* get_file = process_get_file(fd);
 	if(get_file == NULL)
 	{
@@ -302,6 +311,7 @@ int filesize(int fd)
 
 int read(int fd, void *buffer, unsigned size)
 {
+	printf("======================read진입===============\n");
 	check_address(buffer);
 	check_address(buffer + size - 1);
 	/* 파일 디스크립터를 이용하여 파일 객체 검색 */
@@ -354,6 +364,7 @@ int read(int fd, void *buffer, unsigned size)
 /* fd 값이 1일 때 버퍼에 저장된 데이터를 화면에 출력(putbuf() 이용) */
 int write(int fd, const void *buffer, unsigned size)
 {
+	printf("=====================write================\n");
 	check_address(buffer);
 	/* 파일 디스크립터를 이용하여 파일 객체 검색 */
 	struct file *get_file = process_get_file(fd);
@@ -384,6 +395,7 @@ int write(int fd, const void *buffer, unsigned size)
 
 void seek(int fd, unsigned position)
 {
+	printf("=====================seek================\n");
 	/* 열린 파일의 위치(offset)를 이동하는 시스템 콜 */
 	/* position : 현재 위치(offset)를 기준으로 이동 할 거리 */
 
@@ -400,6 +412,7 @@ void seek(int fd, unsigned position)
 
 unsigned tell(int fd)
 {
+	printf("=====================tell================\n");
 	/* 파일 디스크립터를 이용하여 파일 객체 검색 */
 	struct file *get_file = process_get_file(fd);
 
@@ -413,6 +426,7 @@ unsigned tell(int fd)
 
 void close(int fd)
 {
+	printf("=====================close================\n");
 	/* 파일 디스크립터를 이용하여 파일 객체 검색 */
 	struct file *get_file = process_get_file(fd);
 
