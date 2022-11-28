@@ -254,17 +254,12 @@ process_exec (void *f_name) {
 
 	/* We first kill the current context */
 	process_cleanup ();
-
-	// 안쓰는 변수 선언해서 버그 발생 
-	// char fn_copy[128];
-	// memcpy(fn_copy, file_name, strlen(file_name) + 1);
-
 	/* And then load the binary */
 	success = load (file_name, &_if); // 복사한 전체 파일 인자로 넣음.
 
 	/* If load failed, quit. */
+	palloc_free_page (file_name);
 	if (!success){
-		palloc_free_page (file_name);
 		return -1;
 	}
 
