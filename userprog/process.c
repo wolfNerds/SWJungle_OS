@@ -64,7 +64,7 @@ process_create_initd (const char *file_name) {
 int
 parsing_str(char *file_name, char* argv[]){
 	// 토큰 변수, 포인터 - 김채욱
-	printf("=====================parsing_str진입============\n");
+	printf("=================parsing_str진입============\n");
 	char *token, *save_ptr;
 	int count = 0; 
 	// 0 grep 1 foo 2 bar 3 \0 
@@ -99,7 +99,7 @@ initd (void *f_name) {
 tid_t
 process_fork (const char *name, struct intr_frame *if_) {
 	/* Clone current thread to new thread.*/
-	printf("=====================process_fork진입=============\n");
+	printf("=================process_fork진입=============\n");
 	struct thread *curr = thread_current();
 	memcpy(&curr->parent_if, if_, sizeof(struct intr_frame));
 
@@ -244,7 +244,7 @@ int
 process_exec (void *f_name) {
 	char *file_name = f_name;
 	bool success;
-	printf("===================process_exec진입============\n");
+	printf("=================process_exec진입============\n");
 
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
@@ -281,7 +281,7 @@ process_exec (void *f_name) {
 
 void argument_stack(char **argv, int count, struct intr_frame* if_)
 {
-	printf("==================argument_stack진입============\n");
+	printf("=================argument_stack진입============\n");
 	/* 프로그램 이름 및 인자(문자열) push */
 	/* 프로그램 이름 및 인자 주소들 push */
 	/* argv (문자열을 가리키는 주소들의 배열을 가리킴) push*/ 
@@ -363,7 +363,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* 자식 프로세스가 종료될 때 까지 부모 프로세스 대기 (세마포어 이용) */
 	/* 자식 프로세스 디스크립터 삭제 */
 	/* 자식 프로세스의 exit status 리턴 */
-	printf("=============================process_wait=======\n");
+	printf("=================process_wait=======\n");
 	struct thread *child = get_child_process(child_tid);
 
 	if(child == NULL)
@@ -402,7 +402,7 @@ process_exit (void) {
 
 	// sema_up(&curr->sema_wait);
 	// sema_down(&curr->sema_free);
-	printf("====================process_exit진입\n");
+	printf("=================process_exit진입\n");
 	palloc_free_multiple(curr->fdt, 3);
 	file_close(curr->running_file);
 	sema_up(&curr->sema_wait);
@@ -522,7 +522,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
-	printf("===================load 진입==================\n");
+	printf("=================load 진입==================\n");
 	char* argv[128];
 	int count = parsing_str(file_name, argv);
 

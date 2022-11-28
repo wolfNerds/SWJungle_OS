@@ -71,63 +71,63 @@ static __inline int64_t syscall (uint64_t num_, uint64_t a1_, uint64_t a2_,
 			0))
 void
 halt (void) {
-	printf("===================lib_halt===============\n");
+	// printf("=================lib_halt===============\n");
 	syscall0 (SYS_HALT);
 	NOT_REACHED ();
 }
 
 void
 exit (int status) {
-	printf("===================lib_exit===============\n");
+	// printf("=================lib_exit===============\n");
 	syscall1 (SYS_EXIT, status);
 	NOT_REACHED ();
 }
 
 pid_t
 fork (const char *thread_name){
-	printf("===================lib_fork===============\n");
+	// printf("=================lib_fork===============\n");
 	return (pid_t) syscall1 (SYS_FORK, thread_name);
 }
 
 int
 exec (const char *file) {
-	printf("===================lib_exec===============\n");
+	// printf("=================lib_exec===============\n");
 	return (pid_t) syscall1 (SYS_EXEC, file);
 }
 
 int
 wait (pid_t pid) {
-	printf("===================lib_wait===============\n");
+	// printf("=================lib_wait===============\n");
 	return syscall1 (SYS_WAIT, pid);
 }
 
 bool
 create (const char *file, unsigned initial_size) {
-	printf("===================lib_create===============\n");
+	// printf("=================lib_create===============\n");
 	return syscall2 (SYS_CREATE, file, initial_size);
 }
 
 bool
 remove (const char *file) {
-	printf("===================lib_remove===============\n");
+	// printf("=================lib_remove===============\n");
 	return syscall1 (SYS_REMOVE, file);
 }
 
 int
 open (const char *file) {
-	printf("===================lib_open===============\n");
+	// printf("=================lib_open===============\n");
 	return syscall1 (SYS_OPEN, file);
 }
 
 int
 filesize (int fd) {
-	printf("===================lib_filesize===============\n");
+	// printf("=================lib_filesize===============\n");
 	return syscall1 (SYS_FILESIZE, fd);
 }
 
 int
 read (int fd, void *buffer, unsigned size) {
-	printf("=====================lib_read===========\n");
+	// printf("=================lib_read===========\n");
 	return syscall3 (SYS_READ, fd, buffer, size);
 }
 
@@ -138,19 +138,19 @@ write (int fd, const void *buffer, unsigned size) {
 
 void
 seek (int fd, unsigned position) {
-	printf("===================lib_seek===============\n");
+	// printf("=================lib_seek===============\n");
 	syscall2 (SYS_SEEK, fd, position);
 }
 
 unsigned
 tell (int fd) {
-	printf("===================lib_tell===============\n");
+	// printf("=================lib_tell===============\n");
 	return syscall1 (SYS_TELL, fd);
 }
 
 void
 close (int fd) {
-	printf("===================lib_close===============\n");
+	// printf("=================lib_close===============\n");
 	syscall1 (SYS_CLOSE, fd);
 }
 
