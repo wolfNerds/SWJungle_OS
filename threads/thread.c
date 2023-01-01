@@ -218,8 +218,9 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
+	t->exit_status = 0;
+
 	/* fdt 메모리 할당 */
-	t->fd = 2;
 	t->fdt = palloc_get_multiple(PAL_ZERO, 3);
 	if(t->fdt == NULL)
 	{
@@ -227,7 +228,7 @@ thread_create (const char *name, int priority,
 	}
 	t->fdt[0] = 1;
 	t->fdt[1] = 2;
-
+	//adasfasfsdgfdgafdgfdag
 	/* 부모 프로세스 저장 */
 	// t->parent = curr;
 	/* 프로그램이 로드되지 않음 */
@@ -618,8 +619,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->init_priority = priority;
 	list_init(&t->donations);
 	t->wait_on_lock = NULL;
-	t->exit_status = 0;
-
+	// t->exit_status = 0;
 	list_init(&t->child_list);
 
 	sema_init(&t->sema_fork, 0);

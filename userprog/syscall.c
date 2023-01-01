@@ -35,6 +35,7 @@ void syscall_handler (struct intr_frame *);
 
 void
 syscall_init (void) {
+	lock_init(&filesys_lock);
 	write_msr(MSR_STAR, ((uint64_t)SEL_UCSEG - 0x10) << 48  |
 			((uint64_t)SEL_KCSEG) << 32);
 	write_msr(MSR_LSTAR, (uint64_t) syscall_entry);
@@ -44,7 +45,6 @@ syscall_init (void) {
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
-	lock_init(&filesys_lock);
 }
 
 /* The main system call interface */
@@ -176,7 +176,7 @@ void exit(int status)
 	struct thread *cur = thread_current();
 	cur->exit_status = status;
 	/* 정상적으로 종료 시 status는 0 */
-	printf("%s: exit(%d)\n", cur->name, cur->exit_status);
+	printf("%s: exit(%d)\n", cur->name, status);
 
 	/* 종료 시 "프로세스 이름: exit(status)" 출력(Process Termination Message) */
 	/* status 확인 요망 */
@@ -209,6 +209,8 @@ int exec(const char *cmd_line)
 	{
 		return -1;
 	}
+	NOT_REACHED();
+	return 0;
 
 	NOT_REACHED();
 	return 0;
